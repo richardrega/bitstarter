@@ -21,11 +21,15 @@ References:
    - https://developer.mozilla.org/en-US/docs/JSON#JSON_in_Firefox_2
 */
 
+var util = require('util');
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var rest = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+// var URL_DEFAULT = "http://floating-taiga-2827.herokuapp.com";
+var URL_FILE = "html_results.txt";
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -33,6 +37,29 @@ var assertFileExists = function(infile) {
         console.log("%s does not exist. Exiting.", instr);
         process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
     }
+    return instr;
+};
+
+var buildfn = function(program_url) {
+    var response2console = function(result, response) {
+        if (result instanceof Error) {
+            console.error('Error: ' + util.format(result.message));
+            console.log("%s does not exist. Exiting.", program_url);
+            process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
+        } else {
+            fs.writeFileSync(URL_FILE, result);
+            var checkJson = checkHtmlFile(URL_FILE, program.checks);
+            var outJson = JSON.stringify(checkJson, null, 4);
+            console.log(outJson);
+            fs.unlinkSync(URL_FILE);
+        }
+    };
+    return response2console;
+};
+
+var assertURLExists = function(infile) {
+    var instr = infile.toString();
+    // doesn't actually see if the URL exists... yet.
     return instr;
 };
 
@@ -65,10 +92,16 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <URL>', 'Path to URL', clone(assertURLExists), null)
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    if(program.url != null) {
+        var response2console = buildfn(program.url);
+        rest.get(program.url).on('complete', response2console);
+    } else {
+        var checkJson = checkHtmlFile(program.file, program.checks);
+        var outJson = JSON.stringify(checkJson, null, 4);
+        console.log(outJson);
+    }
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
