@@ -1,6 +1,6 @@
 var express = require('express');
 var fs = require('fs');
-var infile = "index.html";
+var infile = "/home/burgundy/Documents/bitstarter/index.html";
 var app = express.createServer(express.logger());
 
 app.get('/', function(request, response) {
